@@ -3,103 +3,92 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Underhållsprogram Botkyrka VA – Maxfet Version</title>
+<title>Underhållsprogram Botkyrka VA</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
 <style>
-/* ===== GRUNDSTIL ===== */
-html, body { margin:0; padding:0; height:100%; font-family: Arial,sans-serif; background:#f0f2f5; }
-#container { display:flex; height:100vh; overflow:hidden; transition: all 0.3s; }
-
-/* ===== SIDOPANEL ===== */
-#sidebar { width:380px; min-width:320px; background:#ffffff; border-right:1px solid #ccc; display:flex; flex-direction:column; padding:15px; overflow-y:auto; box-shadow: 2px 0 6px rgba(0,0,0,0.1);}
-#sidebar h2 { margin:0 0 15px 0; font-size:20px; color:#333; text-align:center; }
-#sidebar label { font-weight:bold; margin-top:12px; display:block; color:#555; }
-#sidebar input, #sidebar select, #sidebar button { width:100%; margin-top:6px; padding:7px; box-sizing:border-box; border-radius:4px; border:1px solid #ccc; font-size:14px; }
-#sidebar button { cursor:pointer; transition: background 0.2s; }
-#sidebar button:hover { background:#007bff; color:white; }
-
-/* ===== COLLAPSIBLES ===== */
-.collapsible { background:#eee; color:#444; cursor:pointer; padding:10px; width:100%; border:none; text-align:left; outline:none; font-size:15px; border-radius:4px; margin-top:10px; }
-.active, .collapsible:hover { background:#ccc; }
-.content { padding:0 10px; display:none; overflow:hidden; background-color:#f9f9f9; margin-top:5px; border-radius:4px; }
-
-/* ===== FILTER KNAPPAR ===== */
-#filters button { margin:5px 5px 5px 0; padding:5px 10px; font-size:13px; }
-
-/* ===== KARTA ===== */
-#map { flex:1; transition: all 0.3s; }
-
-/* ===== TABELL ===== */
-#table-container { max-height:300px; overflow-y:auto; margin-top:10px; border:1px solid #ddd; border-radius:5px; }
-table { width:100%; border-collapse:collapse; font-size:13px; }
-th, td { border-bottom:1px solid #ddd; padding:8px; text-align:left; }
-th { background:#e9ecef; font-weight:bold; position: sticky; top:0; z-index:1; }
+body, html { margin:0; padding:0; font-family: Arial,sans-serif; height:100%; }
+#container { display:flex; height:100vh; overflow:hidden; }
+/* SIDOPANEL */
+#sidebar { width:360px; min-width:280px; background:#f8f9fa; border-right:1px solid #ccc; display:flex; flex-direction:column; padding:10px; overflow-y:auto; }
+#sidebar h2 { margin:0 0 10px 0; font-size:20px; }
+#sidebar label { font-weight:bold; margin-top:10px; display:block; }
+#sidebar input, #sidebar select, #sidebar button { width:100%; margin-top:5px; padding:6px; box-sizing:border-box; }
+#filters button { margin-right:5px; margin-top:5px; padding:5px 8px; cursor:pointer; }
+#addVentilBtn { margin-top:10px; background:#28a745; color:white; font-weight:bold; }
+/* KARTA */
+#map { flex:1; }
+/* TABELL */
+#table-container { max-height:300px; overflow-y:auto; margin-top:10px; }
+table { width:100%; border-collapse:collapse; }
+th, td { border:1px solid #ccc; padding:6px; text-align:left; font-size:13px; }
+th { background:#e9ecef; }
 tr:hover { background:#f1f1f1; cursor:pointer; }
-td img { max-width:40px; border-radius:3px; }
-td select, td input[type=text] { width:100%; }
-
-/* ===== MOBIL ===== */
+/* Mobilvänlig scroll */
 @media(max-width:768px){
   #container { flex-direction:column; }
-  #sidebar { width:100%; max-height:50vh; }
+  #sidebar { width:100%; height:auto; max-height:45vh; }
   #map { height:50vh; }
-  #table-container { max-height:45vh; }
+  #table-container { max-height:40vh; }
 }
-
-/* ===== POPUP FORM ===== */
-.popup-form input, .popup-form select { width:100%; margin-top:5px; padding:5px; border-radius:4px; border:1px solid #ccc; font-size:13px; }
-.popup-form button { margin-top:5px; width:100%; padding:6px; background:#28a745; color:white; border:none; border-radius:4px; cursor:pointer; }
-.popup-form button:hover { background:#218838; }
+/* popup-form */
+.popup-form input, .popup-form select, .popup-form textarea { width:100%; margin-top:5px; padding:4px; box-sizing:border-box; }
+/* foto-preview */
+.img-preview { width:60px; height:40px; object-fit:cover; border:1px solid #ccc; }
+/* collapsable sections */
+.collapsible { background:#e9ecef; cursor:pointer; padding:6px; width:100%; border:none; text-align:left; outline:none; font-size:14px; margin-top:5px; }
+.active, .collapsible:hover { background:#d0d0d0; }
+.content { padding:0 10px; display:none; overflow:hidden; }
 </style>
 </head>
 <body>
-
 <div id="container">
   <div id="sidebar">
-    <h2>🏛️ Underhållsprogram VA</h2>
-    
+    <h2>🏛️ Underhållsprogram</h2>
+    <p>Botkyrka Kommun · VA-enheten</p>
+
     <label>Område</label>
     <select id="areaSelect">
       <option value="tullinge">Tullinge</option>
       <option value="tumba">Tumba</option>
-      <option value="alby">Alby</option>
-      <option value="botkyrka">Botkyrka C</option>
+      <option value="norra">Norra Botkyrka</option>
+      <option value="vårsta">Vårsta</option>
+      <option value="grödinge">Grödinge</option>
     </select>
 
-    <button class="collapsible">Filter Status</button>
-    <div class="content" id="filters">
+    <label>Filter Status</label>
+    <div id="filters">
       <button data-filter="trög">Ventil trög</button>
       <button data-filter="trasig">Ventil trasig</button>
       <button data-filter="ej">Ej kontrollerad</button>
-      <button data-filter="over">Övertäckt</button>
-      <button data-filter="betäckning">Betäckning defekt</button>
-      <button data-filter="hittar">Hittar ej</button>
-      <button data-filter="distanserad">Distanserad</button>
+      <button data-filter="över">Överasfalterad</button>
       <button data-filter="all">Visa alla</button>
     </div>
 
-    <label>Sök VAV/VBP/VSP/SV</label>
-    <input type="text" id="searchVAV" placeholder="Skriv VAV/VBP...">
+    <label>Sök VAV</label>
+    <input type="text" id="searchVAV" placeholder="VAV nummer...">
 
-    <button class="collapsible">Sammanfattning</button>
+    <button id="addVentilBtn">➕ Lägg till ny ventil</button>
+
+    <button type="button" class="collapsible">Sammanfattning</button>
     <div class="content" id="summary">
       <p id="summaryText">Foton med plats: 0<br>Projekt med plats: 0</p>
     </div>
 
-    <button class="collapsible">Tabell</button>
+    <button type="button" class="collapsible">Ventiler</button>
     <div class="content" id="table-container">
       <table>
         <thead>
           <tr>
             <th>Status</th>
             <th>Notering</th>
-            <th>Typ</th>
-            <th>FOTO (GPS)</th>
+            <th>Foto</th>
             <th>Rapportör</th>
-            <th>✔</th>
+            <th>Typ</th>
           </tr>
         </thead>
-        <tbody id="ventilTable"></tbody>
+        <tbody id="ventilTable">
+          <!-- Dynamiska rader -->
+        </tbody>
       </table>
     </div>
   </div>
@@ -107,144 +96,176 @@ td select, td input[type=text] { width:100%; }
   <div id="map"></div>
 </div>
 
+<!-- MODALS -->
+<div id="ventilModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:9999;">
+  <div style="background:white; max-width:400px; margin:50px auto; padding:20px; border-radius:6px; position:relative;">
+    <h3>Lägg till / Redigera Ventil</h3>
+    <label>VAV-nummer</label><input type="text" id="modalVAV">
+    <label>Status</label>
+    <select id="modalStatus">
+      <option value="trög">Trög (2 gubbar)</option>
+      <option value="trasig">Trasig</option>
+      <option value="ej">Ej kontrollerad</option>
+      <option value="över">Överasfalterad</option>
+      <option value="övertäckt">Övertäckt</option>
+      <option value="betäckning">Betäckning Defekt</option>
+      <option value="hittarEj">Hittar ej</option>
+      <option value="distanserad">Distanserad</option>
+    </select>
+    <label>Typ</label>
+    <select id="modalTyp">
+      <option value="VAV">VAV</option>
+      <option value="VBP">VBP</option>
+      <option value="VSP">VSP</option>
+      <option value="SV">SV</option>
+    </select>
+    <label>Notering</label>
+    <textarea id="modalNotering"></textarea>
+    <label>Foto</label>
+    <input type="file" id="modalFoto" accept="image/*" capture="environment">
+    <input type="hidden" id="modalLat">
+    <input type="hidden" id="modalLng">
+    <button id="saveVentilBtn" style="margin-top:10px;">💾 Spara</button>
+    <button id="closeModal" style="position:absolute; top:10px; right:10px;">✖</button>
+  </div>
+</div>
+
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script>
-// -------------------- DUMMY DATA --------------------
-const ventiler=[];
-const typOptions=["VBP","VSP","SV"];
-const statusOptions=["trög","trasig","ej","over","betäckning","hittar","distanserad"];
-for(let i=1;i<=30;i++){
-  ventiler.push({
-    id:"VAV"+i,
-    lat:59.215 + Math.random()*0.02,
-    lng:17.860 + Math.random()*0.02,
-    status:statusOptions[Math.floor(Math.random()*statusOptions.length)],
-    notering:"Notering "+i,
-    typ: typOptions[Math.floor(Math.random()*typOptions.length)],
-    foto:"",
-    gps:""
-  });
-}
+// INITIAL DATA
+let ventiler = [
+  {id:"VAV74259", lat:59.215, lng:17.867, status:"trasig", notering:"Snurrar bara", rapportor:"Fredrik", typ:"VAV", foto:""},
+  {id:"VAV97298", lat:59.216, lng:17.869, status:"trög", notering:"2 Gubbar", rapportor:"Fredrik", typ:"VAV", foto:""},
+  {id:"VBP93823", lat:59.217, lng:17.865, status:"över", notering:"Vatten och skit, måste höjas och asfalteras", rapportor:"Fredrik", typ:"VBP", foto:""}
+];
 
-// -------------------- INIT MAP --------------------
-const map=L.map('map').setView([59.215,17.867],14);
+const map = L.map('map').setView([59.215,17.867], 14);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{ attribution:'&copy; OpenStreetMap' }).addTo(map);
-const markers=[];
 
-// -------------------- CREATE TABLE --------------------
+let markers = [];
+
+// UPDATE TABLE
 function updateTable(filter=null, search=""){
-  const tbody=document.getElementById('ventilTable');
-  tbody.innerHTML="";
+  const tbody = document.getElementById('ventilTable');
+  tbody.innerHTML = "";
   ventiler.forEach(v=>{
     if(filter && filter!=="all" && v.status!==filter) return;
-    if(search && !v.id.toLowerCase().includes(search.toLowerCase()) && !v.typ.toLowerCase().includes(search.toLowerCase())) return;
-    const tr=document.createElement('tr');
-    tr.innerHTML=`
-      <td>
-        <select onchange="updateStatus('${v.id}',this.value)">
-          ${statusOptions.map(s=>`<option value="${s}" ${v.status===s?'selected':''}>${s}</option>`).join('')}
-        </select>
-      </td>
-      <td><input type="text" value="${v.notering}" onchange="updateNotering('${v.id}',this.value)"></td>
-      <td>
-        <select onchange="updateTyp('${v.id}',this.value)">
-          ${typOptions.map(s=>`<option value="${s}" ${v.typ===s?'selected':''}>${s}</option>`).join('')}
-        </select>
-      </td>
-      <td>
-        <input type="file" accept="image/*" onchange="addFoto('${v.id}',this)">
-        ${v.foto?`<br><img src="${v.foto}"> <br>GPS:${v.gps}`:''}
-      </td>
-      <td><input type="text" value="Fredrik Kornelind"></td>
-      <td><input type="checkbox"></td>
-    `;
+    if(search && !v.id.toLowerCase().includes(search.toLowerCase())) return;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${v.status}</td><td>${v.notering}</td><td>${v.foto?'<img src="'+v.foto+'" class="img-preview">':''}</td><td>${v.rapportor}</td><td>${v.typ}</td>`;
+    tr.addEventListener('click',()=>openModal(v));
     tbody.appendChild(tr);
   });
-  document.getElementById('summaryText').innerHTML=`Foton med plats: ${ventiler.filter(v=>v.foto!=="").length}<br>Projekt med plats: 1`;
+  document.getElementById('summaryText').innerHTML = `Foton med plats: ${ventiler.filter(v=>v.foto).length}<br>Projekt med plats: ${ventiler.length}`;
 }
 
-// -------------------- POPUP MARKERS --------------------
-function createPopupContent(v){
-  return `
-  <div class="popup-form">
-    <b>${v.id}</b><br>Status:
-    <select id="status-${v.id}" onchange="updateStatus('${v.id}',this.value)">
-      ${statusOptions.map(s=>`<option value="${s}" ${v.status===s?'selected':''}>${s}</option>`).join('')}
-    </select>
-    <input type="text" id="note-${v.id}" value="${v.notering}" placeholder="Notering" onchange="updateNotering('${v.id}',this.value)">
-    <select id="typ-${v.id}" onchange="updateTyp('${v.id}',this.value)">
-      ${typOptions.map(s=>`<option value="${s}" ${v.typ===s?'selected':''}>${s}</option>`).join('')}
-    </select>
-    <input type="file" accept="image/*" onchange="addFoto('${v.id}',this)">
-    ${v.foto?`<br><img src="${v.foto}" style="max-width:60px;"><br>GPS:${v.gps}`:''}
-  </div>`;
-}
-
+// UPDATE MARKERS
 function updateMarkers(filter=null, search=""){
   markers.forEach(m=>map.removeLayer(m));
-  markers.length=0;
+  markers=[];
   ventiler.forEach(v=>{
     if(filter && filter!=="all" && v.status!==filter) return;
-    if(search && !v.id.toLowerCase().includes(search.toLowerCase()) && !v.typ.toLowerCase().includes(search.toLowerCase())) return;
-    const color=v.status==="trög"?"orange":v.status==="trasig"?"red":"blue";
-    const marker=L.circleMarker([v.lat,v.lng],{radius:9,color:color,fillOpacity:0.8}).addTo(map);
-    marker.bindPopup(createPopupContent(v));
+    if(search && !v.id.toLowerCase().includes(search.toLowerCase())) return;
+    const color = v.status==="trög"?"orange":v.status==="trasig"?"red":v.status==="över"?"blue":"green";
+    const marker = L.circleMarker([v.lat,v.lng], {radius:8,color:color,fillOpacity:0.7}).addTo(map);
+    marker.bindPopup(`<b>${v.id}</b><br>Status: ${v.status}<br>Notering: ${v.notering}<br>Typ: ${v.typ}<br>Rapportör: ${v.rapportor}`);
+    marker.on('click',()=>openModal(v));
     markers.push(marker);
   });
 }
 
-// -------------------- UPDATE FUNCTIONS --------------------
-function updateStatus(id,value){ const v=ventiler.find(x=>x.id===id); if(v)v.status=value; updateMarkers(); updateTable(); }
-function updateNotering(id,value){ const v=ventiler.find(x=>x.id===id); if(v)v.notering=value; updateTable(); }
-function updateTyp(id,value){ const v=ventiler.find(x=>x.id===id); if(v)v.typ=value; updateMarkers(); updateTable(); }
+// MODAL FUNCTIONS
+const modal = document.getElementById('ventilModal');
+const closeModalBtn = document.getElementById('closeModal');
+closeModalBtn.onclick = ()=>{ modal.style.display="none"; }
 
-// -------------------- FOTO + GPS --------------------
-function addFoto(id,input){
-  const v=ventiler.find(x=>x.id===id);
-  if(!v || !input.files[0]) return;
-  const reader=new FileReader();
-  reader.onload=function(e){
-    v.foto=e.target.result;
+function openModal(v=null){
+  modal.style.display="block";
+  if(v){
+    document.getElementById('modalVAV').value = v.id;
+    document.getElementById('modalStatus').value = v.status;
+    document.getElementById('modalTyp').value = v.typ;
+    document.getElementById('modalNotering').value = v.notering;
+    document.getElementById('modalLat').value = v.lat;
+    document.getElementById('modalLng').value = v.lng;
+  }else{
+    document.getElementById('modalVAV').value="";
+    document.getElementById('modalStatus').value="trög";
+    document.getElementById('modalTyp').value="VAV";
+    document.getElementById('modalNotering').value="";
     if(navigator.geolocation){
       navigator.geolocation.getCurrentPosition(pos=>{
-        v.gps=pos.coords.latitude.toFixed(5)+","+pos.coords.longitude.toFixed(5);
-        updateTable();
-        updateMarkers();
+        document.getElementById('modalLat').value=pos.coords.latitude;
+        document.getElementById('modalLng').value=pos.coords.longitude;
       });
-    }else{
-      v.gps="Ej GPS";
-      updateTable();
-      updateMarkers();
     }
-  };
-  reader.readAsDataURL(input.files[0]);
+  }
 }
 
-// -------------------- EVENT LISTENERS --------------------
+document.getElementById('addVentilBtn').onclick = ()=>openModal();
+
+// SAVE VENTIL
+document.getElementById('saveVentilBtn').onclick = ()=>{
+  const vav = document.getElementById('modalVAV').value;
+  const status = document.getElementById('modalStatus').value;
+  const typ = document.getElementById('modalTyp').value;
+  const notering = document.getElementById('modalNotering').value;
+  const lat = parseFloat(document.getElementById('modalLat').value)||59.215;
+  const lng = parseFloat(document.getElementById('modalLng').value)||17.867;
+
+  const fileInput = document.getElementById('modalFoto');
+  if(fileInput.files && fileInput.files[0]){
+    const reader = new FileReader();
+    reader.onload = function(e){
+      saveVentilData(vav,status,typ,notering,lat,lng,e.target.result);
+    }
+    reader.readAsDataURL(fileInput.files[0]);
+  }else{
+    saveVentilData(vav,status,typ,notering,lat,lng,"");
+  }
+  modal.style.display="none";
+}
+
+function saveVentilData(vav,status,typ,notering,lat,lng,foto){
+  const existing = ventiler.find(v=>v.id===vav);
+  if(existing){
+    existing.status=status; existing.typ=typ; existing.notering=notering; existing.lat=lat; existing.lng=lng; existing.foto=foto;
+  }else{
+    ventiler.push({id:vav,status:status,typ:typ,notering:notering,lat:lat,lng:lng,rapportor:"Fredrik",foto:foto});
+  }
+  updateTable();
+  updateMarkers();
+}
+
+// FILTER & SEARCH
 document.querySelectorAll('#filters button').forEach(btn=>{
-  btn.addEventListener('click',()=>{ 
-    const filter=btn.dataset.filter;
-    const search=document.getElementById('searchVAV').value;
-    updateTable(filter,search); updateMarkers(filter,search);
+  btn.addEventListener('click',()=> {
+    const filter = btn.dataset.filter;
+    const search = document.getElementById('searchVAV').value;
+    updateTable(filter,search);
+    updateMarkers(filter,search);
   });
 });
-
-document.getElementById('searchVAV').addEventListener('input',e=>{
-  const search=e.target.value; updateTable(null,search); updateMarkers(null,search);
+document.getElementById('searchVAV').addEventListener('input', e=>{
+  const search = e.target.value;
+  updateTable(null,search);
+  updateMarkers(null,search);
 });
 
 // COLLAPSIBLES
-const coll=document.getElementsByClassName("collapsible");
+const coll = document.getElementsByClassName("collapsible");
 for(let i=0;i<coll.length;i++){
   coll[i].addEventListener("click",function(){
     this.classList.toggle("active");
-    const content=this.nextElementSibling;
-    content.style.display= content.style.display==="block"?"none":"block";
+    const content = this.nextElementSibling;
+    if(content.style.display==="block"){content.style.display="none";}
+    else{content.style.display="block";}
   });
 }
 
 // INIT
-updateTable(); updateMarkers();
+updateTable();
+updateMarkers();
 </script>
 </body>
 </html>
