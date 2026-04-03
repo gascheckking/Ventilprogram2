@@ -1,154 +1,109 @@
 <!DOCTYPE html>
 <html lang="sv">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>VA Ventilrapport V2.1</title>
-
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>VA Rapport</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
 <style>
-body { margin:0; font-family: Arial; background:#0f0f0f; color:#fff; }
-#map { height: 35vh; }
-.panel { padding:12px; background:#181818; }
-
-input, textarea {
-  width:100%; padding:12px; border-radius:10px; border:none; margin-top:8px; font-size:15px;
-}
-
-button {
-  padding:14px; border:none; border-radius:10px; font-size:15px;
-}
-
-.grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
-
-.red{background:#ff4d4d;} .orange{background:#ff9f43;} .yellow{background:#ffd93d;color:#000;} .black{background:#555;} .green{background:#4cd137;}
-
-.save-btn{width:100%; background:#00a8ff; margin-top:8px;}
-
-.card{background:#222; padding:10px; border-radius:10px; margin-top:8px;}
-
-.filter-bar{display:flex; gap:6px; overflow-x:auto;}
-.filter-btn{background:#333; padding:8px; border-radius:8px; white-space:nowrap;}
-.active{outline:2px solid #00a8ff;}
-
-.toggle-map{background:#444; width:100%; margin-bottom:6px;}
-
+:root{--bg:#0f0f0f;--card:#1b1b1b;--accent:#00a8ff}
+body{margin:0;font-family:sans-serif;background:var(--bg);color:#fff}
+#map{height:30vh}
+.panel{padding:10px;background:#181818}
+input,textarea,button{width:100%;padding:12px;border:none;border-radius:10px;margin-top:8px;font-size:15px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.red{background:#ff4d4d}.orange{background:#ff9f43}.yellow{background:#ffd93d;color:#000}.black{background:#555}.green{background:#4cd137}
+.save{background:var(--accent)}
+.card{background:#222;padding:10px;border-radius:10px;margin-top:8px}
+.row{display:flex;gap:6px;overflow:auto}
+.btn{background:#333;padding:8px;border-radius:8px;white-space:nowrap}
+.active{outline:2px solid var(--accent)}
 </style>
 </head>
-
 <body>
 
-<button class="toggle-map" onclick="toggleMap()">Visa/Dölj karta</button>
+<button onclick="toggleMap()">Karta</button>
 <div id="map"></div>
 
 <div class="panel">
-  <input id="search" placeholder="VAV ID">
+<input id="id" placeholder="VAV ID" readonly />
+<div style="display:flex;gap:6px;margin-top:8px">
+<button onclick="prevVAV()">⬅️</button>
+<button onclick="nextVAV()">➡️</button>
+</div>
 
-  <div class="grid">
-    <button class="red" onclick="setStatus('Trasig')">Trasig</button>
-    <button class="orange" onclick="setStatus('Trög')">Trög</button>
-    <button class="yellow" onclick="setStatus('Ej kontrollerad')">Ej kontrollerad</button>
-    <button class="black" onclick="setStatus('Hittas ej')">Hittas ej</button>
-    <button class="green" onclick="setStatus('OK')">OK</button>
-  </div>
-
-  <textarea id="note" placeholder="Notering"></textarea>
-  <button class="save-btn" onclick="saveReport()">Spara</button>
+<div class="grid">
+<button class="red" onclick="s('Trasig')">Trasig</button>
+<button class="orange" onclick="s('Trög')">Trög</button>
+<button class="yellow" onclick="s('Ej')">Ej koll</button>
+<button class="black" onclick="s('Hittas ej')">Saknas</button>
+<button class="green" onclick="s('OK')">OK</button>
+</div>
+<textarea id="note" placeholder="Notering"></textarea>
+<button class="save" onclick="save()">Spara</button>
 </div>
 
 <div class="panel">
-  <div class="filter-bar">
-    <button class="filter-btn active" onclick="setFilter('ALL', this)">Alla</button>
-    <button class="filter-btn" onclick="setFilter('Trasig', this)">Trasig</button>
-    <button class="filter-btn" onclick="setFilter('Trög', this)">Trög</button>
-  </div>
-
-  <div id="list"></div>
+<div class="row">
+<button class="btn active" onclick="f('ALL',this)">Alla</button>
+<button class="btn" onclick="f('Trasig',this)">Trasig</button>
+<button class="btn" onclick="f('Trög',this)">Trög</button>
+</div>
+<div id="list"></div>
 </div>
 
 <script>
-let map = L.map('map', { zoomControl:false }).setView([59.17,17.82], 13);
+let map=L.map('map',{zoomControl:false}).setView([59.17,17.82],13)
+let bounds=[[59.1,17.7],[59.25,17.95]];map.setMaxBounds(bounds);map.fitBounds(bounds)
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map)
 
-// Begränsa till Botkyrka (bbox)
-let bounds = [[59.1,17.7],[59.25,17.95]];
-map.setMaxBounds(bounds);
-map.fitBounds(bounds);
+let data=JSON.parse(localStorage.getItem('r')||'[]'),m=[],st=null,filter='ALL',showMap=true
 
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
-  noWrap:true
-}).addTo(map);
+// Auto VAV lista (simulerad – ersätt med riktig senare)
+let vavList=[];
+for(let i=1201;i<1300;i++){vavList.push('VAV'+i)}
+let currentIndex=0;
 
-let reports = JSON.parse(localStorage.getItem('reports')||'[]');
-let currentStatus=null;
-let markers=[];
-let currentFilter='ALL';
-let mapVisible=true;
-
-function toggleMap(){
-  mapVisible=!mapVisible;
-  document.getElementById('map').style.display = mapVisible?'block':'none';
+function setNextVAV(){
+ document.getElementById('id').value=vavList[currentIndex]||'VAV?'
 }
 
-function setStatus(s){ currentStatus=s; }
-
-function getColor(s){
-  return s==='Trasig'?'red':s==='Trög'?'orange':s==='Ej kontrollerad'?'yellow':s==='Hittas ej'?'black':'green';
+function nextVAV(){
+ currentIndex=(currentIndex+1)%vavList.length
+ setNextVAV()
 }
 
-function saveReport(){
-  if(!currentStatus){ alert('Välj status'); return; }
+function prevVAV(){
+ currentIndex=(currentIndex-1+vavList.length)%vavList.length
+ setNextVAV()
+}
 
-  navigator.geolocation.getCurrentPosition(pos=>{
-    let r={
-      id: document.getElementById('search').value || 'Okänd',
-      status: currentStatus,
-      note: document.getElementById('note').value,
-      lat: pos.coords.latitude,
-      lng: pos.coords.longitude,
-      date: new Date().toLocaleString()
-    };
+function toggleMap(){showMap=!showMap;map.getContainer().style.display=showMap?'block':'none'}
+function s(x){st=x}
+function col(x){return x=='Trasig'?'red':x=='Trög'?'orange':x=='Ej'?'yellow':x=='Hittas ej'?'black':'green'}
 
-    reports.push(r);
-    localStorage.setItem('reports', JSON.stringify(reports));
-
-    draw();
-
-    document.getElementById('note').value='';
-    document.getElementById('search').value='';
-    currentStatus=null;
-  });
+function save(){
+ if(!st)return alert('Status')
+ navigator.geolocation.getCurrentPosition(p=>{
+  let r={id:id.value||'?',s:st,n:note.value,lat:p.coords.latitude,lng:p.coords.longitude}
+  data.push(r);localStorage.setItem('r',JSON.stringify(data));setNextVAV();
+draw();id.value='';note.value='';st=null
+ })
 }
 
 function draw(){
-  markers.forEach(m=>map.removeLayer(m));
-  markers=[];
-
-  let list=document.getElementById('list');
-  list.innerHTML='';
-
-  reports.slice().reverse().forEach(r=>{
-    if(currentFilter!=='ALL' && r.status!==currentFilter) return;
-
-    let m=L.circleMarker([r.lat,r.lng],{color:getColor(r.status),radius:8}).addTo(map);
-    markers.push(m);
-
-    let div=document.createElement('div');
-    div.className='card';
-    div.innerHTML=`<b>${r.id}</b><br>${r.status}<br>${r.note}`;
-    list.appendChild(div);
-  });
+ m.forEach(x=>map.removeLayer(x));m=[];list.innerHTML=''
+ data.slice().reverse().forEach(r=>{
+  if(filter!='ALL'&&r.s!=filter)return
+  let mk=L.circleMarker([r.lat,r.lng],{color:col(r.s),radius:7}).addTo(map);m.push(mk)
+  let d=document.createElement('div');d.className='card';d.innerHTML=`<b>${r.id}</b><br>${r.s}<br>${r.n}`;list.appendChild(d)
+ })
 }
 
-function setFilter(f, el){
-  currentFilter=f;
-  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
-  el.classList.add('active');
-  draw();
-}
+function f(x,e){filter=x;document.querySelectorAll('.btn').forEach(b=>b.classList.remove('active'));e.classList.add('active');draw()}
 
-draw();
+draw()
 </script>
 
 </body>
