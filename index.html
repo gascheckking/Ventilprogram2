@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VA Ventilrapport</title>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<style>
+body { margin:0; font-family: Arial; }
+#map { height: 60vh; }
+.panel { padding:10px; background:#fff; }
+button { padding:10px; margin:5px; border:none; border-radius:8px; }
+.status-btn { width:48%; }
+input, textarea { width:100%; padding:8px; margin-top:5px; }
+.card { padding:10px; margin:5px 0; background:#f3f3f3; border-radius:10px; }
+</style>
+</head>
+
+<body>
+
+<div id="map"></div>
+
+<div class="panel">
+  <h3>Ny rapport</h3>
+  <input id="vid" placeholder="VAV ID (ex VAV1201)">
+
+  <div>
+    <button class="status-btn" onclick="setStatus('Trasig')">🔴 Trasig</button>
+    <button class="status-btn" onclick="setStatus('Trög')">🟠 Trög</button>
+    <button class="status-btn" onclick="setStatus('Ej kontrollerad')">🟡 Ej kontrollerad</button>
+    <button class="status-btn" onclick="setStatus('Hittas ej')">⚫ Hittas ej</button>
+    <button class="status-btn" onclick="setStatus('OK')">🟢 OK</button>
+  </div>
+
+  <textarea id="note" placeholder="Notering"></textarea>
+  <button onclick="saveReport()">Spara</button>
+</div>
+
+<div class="panel">
+  <h3>Rapporter</h3>
+  <div id="list"></div>
+</div>
+
+<script>
+let map = L.map('map').setView([59.2,17.8], 12);
+
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+let currentStatus = null;
+let reports = JSON.parse(localStorage.getItem('reports')||'[]');
+let markers = [];
+
+function setStatus(s){
+  currentStatus = s;
+  alert('Status: '+s);
+}
+
+function getColor(status){
+  return status==='Trasig'?'red':
+         status==='Trög'?'orange':
+         status==='Ej kontrollerad'?'yellow':
+         status==='Hittas ej'?'black':'green';
+}
+
+function saveReport(){
+  if(!navigator.geolocation){ alert('Ingen GPS'); return; }
+
+  navigator.geolocation.getCurrentPosition(pos=>{
+    let report = {
+      id: document.getElementById('vid').value,
+      status: currentStatus,
+      note: document.getElementById('note').value,
+      lat: pos.coords.latitude,
+      lng: pos.coords.longitude,
+      date: new Date().toLocaleString()
+    };
+
+    reports.push(report);
+    localStorage.setItem('reports', JSON.stringify(reports));
+
+    addMarker(report);
+    renderList();
+
+    alert('Sparad');
+  });
+}
+
+function addMarker(r){
+  let marker = L.circleMarker([r.lat, r.lng], {
+    color: getColor(r.status),
+    radius: 8
+  }).addTo(map);
+
+  marker.bindPopup(`<b>${r.id}</b><br>${r.status}<br>${r.note}`);
+  markers.push(marker);
+}
+
+function renderList(){
+  let list = document.getElementById('list');
+  list.innerHTML='';
+
+  reports.slice().reverse().forEach(r=>{
+    let div = document.createElement('div');
+    div.className='card';
+    div.innerHTML = `<b>${r.id}</b> - ${r.status}<br>${r.note}<br>${r.date}`;
+    list.appendChild(div);
+  });
+}
+
+reports.forEach(addMarker);
+renderList();
+</script>
+
+</body>
+</html>
