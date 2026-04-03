@@ -1,110 +1,141 @@
 <!DOCTYPE html>
 <html lang="sv">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>VA Rapport</title>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VentilApp PRO MAX</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
 <style>
-:root{--bg:#0f0f0f;--card:#1b1b1b;--accent:#00a8ff}
-body{margin:0;font-family:sans-serif;background:var(--bg);color:#fff}
-#map{height:30vh}
-.panel{padding:10px;background:#181818}
-input,textarea,button{width:100%;padding:12px;border:none;border-radius:10px;margin-top:8px;font-size:15px}
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.red{background:#ff4d4d}.orange{background:#ff9f43}.yellow{background:#ffd93d;color:#000}.black{background:#555}.green{background:#4cd137}
-.save{background:var(--accent)}
-.card{background:#222;padding:10px;border-radius:10px;margin-top:8px}
-.row{display:flex;gap:6px;overflow:auto}
-.btn{background:#333;padding:8px;border-radius:8px;white-space:nowrap}
-.active{outline:2px solid var(--accent)}
+body{margin:0;font-family:system-ui;background:#eef2f5}
+.header{background:#1e4663;color:#fff;padding:16px;font-size:18px;font-weight:600}
+.container{max-width:1300px;margin:auto;padding:16px}
+.card{background:#fff;padding:16px;border-radius:16px;margin-bottom:16px;box-shadow:0 4px 10px rgba(0,0,0,.05)}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+input,select{padding:12px;border-radius:12px;border:1px solid #ddd;font-size:14px;flex:1}
+button{padding:12px 20px;border-radius:12px;border:none;background:#ff9800;color:#fff;font-weight:600;cursor:pointer}
+#map{height:220px;border-radius:14px}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{background:#f5f5f5;text-align:left}
+th,td{padding:10px;border-bottom:1px solid #eee}
+.status{padding:5px 10px;border-radius:20px;font-size:12px;font-weight:600}
+.ok{background:#d4edda}
+.bad{background:#f8d7da}
+.warn{background:#fff3cd}
+.toolbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.search{max-width:300px}
 </style>
 </head>
 <body>
+<div class="header">🚀 VentilApp PRO MAX</div>
+<div class="container">
 
-<button onclick="toggleMap()">Karta</button>
+<div class="card">
 <div id="map"></div>
-
-<div class="panel">
-<input id="id" placeholder="VAV ID" readonly />
-<div style="display:flex;gap:6px;margin-top:8px">
-<button onclick="prevVAV()">⬅️</button>
-<button onclick="nextVAV()">➡️</button>
 </div>
 
-<div class="grid">
-<button class="red" onclick="s('Trasig')">Trasig</button>
-<button class="orange" onclick="s('Trög')">Trög</button>
-<button class="yellow" onclick="s('Ej')">Ej koll</button>
-<button class="black" onclick="s('Hittas ej')">Saknas</button>
-<button class="green" onclick="s('OK')">OK</button>
-</div>
-<textarea id="note" placeholder="Notering"></textarea>
-<button class="save" onclick="save()">Spara</button>
-</div>
-
-<div class="panel">
+<div class="card">
 <div class="row">
-<button class="btn active" onclick="f('ALL',this)">Alla</button>
-<button class="btn" onclick="f('Trasig',this)">Trasig</button>
-<button class="btn" onclick="f('Trög',this)">Trög</button>
+<input id="vav" placeholder="VAV nummer">
+<select id="status">
+<option value="OK">OK</option>
+<option value="Trasig">Trasig</option>
+<option value="Trög">Trög</option>
+<option value="Ej kontrollerad">Ej kontrollerad</option>
+</select>
+<input id="plats" placeholder="Plats / GPS">
 </div>
-<div id="list"></div>
+<br>
+<div class="row">
+<input id="note" placeholder="Notering...">
+<button onclick="saveVentil()">💾 Spara</button>
+</div>
+</div>
+
+<div class="card">
+<div class="toolbar">
+<input id="search" class="search" placeholder="Sök VAV / plats..." oninput="render()">
+<button onclick="exportData()">📤 Export</button>
+</div>
+<table>
+<thead>
+<tr>
+<th>VAV</th>
+<th>Status</th>
+<th>Plats</th>
+<th>Notering</th>
+<th></th>
+</tr>
+</thead>
+<tbody id="list"></tbody>
+</table>
+</div>
+
 </div>
 
 <script>
-let map=L.map('map',{zoomControl:false}).setView([59.17,17.82],13)
-let bounds=[[59.1,17.7],[59.25,17.95]];map.setMaxBounds(bounds);map.fitBounds(bounds)
+let data = JSON.parse(localStorage.getItem('ventiler_pro')||'[]')
+
+let map = L.map('map').setView([59.2,17.8],11)
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map)
 
-let data=JSON.parse(localStorage.getItem('r')||'[]'),m=[],st=null,filter='ALL',showMap=true
+let marker
+map.on('click',e=>{
+ if(marker) map.removeLayer(marker)
+ marker = L.marker(e.latlng).addTo(map)
+ document.getElementById('plats').value = e.latlng.lat.toFixed(5)+', '+e.latlng.lng.toFixed(5)
+})
 
-// Auto VAV lista (simulerad – ersätt med riktig senare)
-let vavList=[];
-for(let i=1201;i<1300;i++){vavList.push('VAV'+i)}
-let currentIndex=0;
+function saveVentil(){
+ let v = document.getElementById('vav').value.trim()
+ let s = document.getElementById('status').value
+ let p = document.getElementById('plats').value
+ let n = document.getElementById('note').value
 
-function setNextVAV(){
- document.getElementById('id').value=vavList[currentIndex]||'VAV?'
+ if(!v) return alert('VAV saknas')
+
+ data.push({id:Date.now(),v,s,p,n})
+ localStorage.setItem('ventiler_pro',JSON.stringify(data))
+ clearForm()
+ render()
 }
 
-function nextVAV(){
- currentIndex=(currentIndex+1)%vavList.length
- setNextVAV()
+function clearForm(){
+ document.getElementById('vav').value=''
+ document.getElementById('note').value=''
 }
 
-function prevVAV(){
- currentIndex=(currentIndex-1+vavList.length)%vavList.length
- setNextVAV()
-}
-
-function toggleMap(){showMap=!showMap;map.getContainer().style.display=showMap?'block':'none'}
-function s(x){st=x}
-function col(x){return x=='Trasig'?'red':x=='Trög'?'orange':x=='Ej'?'yellow':x=='Hittas ej'?'black':'green'}
-
-function save(){
- if(!st)return alert('Status')
- navigator.geolocation.getCurrentPosition(p=>{
-  let r={id:id.value||'?',s:st,n:note.value,lat:p.coords.latitude,lng:p.coords.longitude}
-  data.push(r);localStorage.setItem('r',JSON.stringify(data));setNextVAV();
-draw();id.value='';note.value='';st=null
+function render(){
+ let q = document.getElementById('search').value.toLowerCase()
+ let html=''
+ data
+ .filter(d=> d.v.toLowerCase().includes(q) || d.p.toLowerCase().includes(q))
+ .forEach(d=>{
+ let cls = d.s=='OK'?'ok':d.s=='Trasig'?'bad':'warn'
+ html+=`<tr>
+ <td><b>${d.v}</b></td>
+ <td><span class="status ${cls}">${d.s}</span></td>
+ <td>${d.p}</td>
+ <td>${d.n||''}</td>
+ <td><button onclick="remove(${d.id})">🗑️</button></td>
+ </tr>`
  })
+ document.getElementById('list').innerHTML=html
 }
 
-function draw(){
- m.forEach(x=>map.removeLayer(x));m=[];list.innerHTML=''
- data.slice().reverse().forEach(r=>{
-  if(filter!='ALL'&&r.s!=filter)return
-  let mk=L.circleMarker([r.lat,r.lng],{color:col(r.s),radius:7}).addTo(map);m.push(mk)
-  let d=document.createElement('div');d.className='card';d.innerHTML=`<b>${r.id}</b><br>${r.s}<br>${r.n}`;list.appendChild(d)
- })
+function remove(id){
+ data = data.filter(d=>d.id!=id)
+ localStorage.setItem('ventiler_pro',JSON.stringify(data))
+ render()
 }
 
-function f(x,e){filter=x;document.querySelectorAll('.btn').forEach(b=>b.classList.remove('active'));e.classList.add('active');draw()}
+function exportData(){
+ let text = data.map(d=>`${d.v} | ${d.s} | ${d.p} | ${d.n}`).join('\n')
+ navigator.clipboard.writeText(text)
+ alert('Kopierat!')
+}
 
-draw()
+render()
 </script>
-
 </body>
 </html>
