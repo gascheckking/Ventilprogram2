@@ -3,133 +3,119 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>VA Underhåll Botkyrka</title>
+<title>Underhållsprogram VA</title>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 
 <style>
-body{margin:0;font-family:Arial;background:#111;color:#fff;}
-.hidden{display:none;}
+body { margin:0; font-family:Arial; background:#0f172a; color:white;}
+header { background:#0b2447; padding:15px; display:flex; justify-content:space-between;}
+button { padding:10px; border:none; border-radius:8px; cursor:pointer;}
+.primary { background:#f97316; color:white;}
+.secondary { background:#1e293b; color:white;}
 
-#nav{display:flex;background:#000;}
-#nav button{flex:1;padding:12px;background:#222;color:#fff;border:none;}
+.page { display:none; padding:10px;}
+.active { display:block;}
 
-.page{padding:10px;height:calc(100vh - 50px);overflow:auto;}
+#map { height:300px; border-radius:12px;}
 
-input,select,textarea,button{
-width:100%;padding:10px;margin-top:8px;font-size:16px;
+.card {
+ background:#1e293b;
+ padding:15px;
+ border-radius:12px;
+ margin-top:10px;
 }
 
-#saveBtn{background:#28a745;font-size:18px;}
+input, select {
+ width:100%;
+ padding:10px;
+ margin-top:5px;
+ border-radius:8px;
+ border:none;
+}
 
-#map{height:300px;margin-top:10px;}
+.badge {
+ padding:5px 10px;
+ border-radius:8px;
+ margin:3px;
+ display:inline-block;
+ cursor:pointer;
+}
 
-table{width:100%;border-collapse:collapse;margin-top:10px;}
-td,th{border:1px solid #444;padding:5px;font-size:12px;}
-tr:hover{background:#333;cursor:pointer;}
+.red{background:#ef4444;}
+.orange{background:#f97316;}
+.yellow{background:#eab308;}
+.blue{background:#3b82f6;}
+.green{background:#22c55e;}
 
-.orange{color:orange;}
-.red{color:red;}
-.blue{color:cyan;}
-.gray{color:gray;}
+.list-item {
+ background:#111827;
+ padding:10px;
+ margin:5px 0;
+ border-radius:10px;
+}
 
 </style>
 </head>
 
 <body>
 
-<div id="nav">
-<button onclick="show('field')">📸 Fältläge</button>
-<button onclick="show('admin')">🧠 Admin</button>
+<header>
+<div>🏛️ VA Underhåll</div>
+<div>
+<button onclick="showPage('field')" class="primary">Fältläge</button>
+<button onclick="showPage('admin')" class="secondary">Admin</button>
 </div>
+</header>
 
-<!-- ================= FIELD ================= -->
-<div id="field" class="page">
-
-<h2>🏛️ Underhållsprogram</h2>
-<p>Botkyrka Kommun · VA-enheten</p>
-
-<select id="area">
-<option>Tullinge</option>
-<option>Tumba</option>
-<option>Norra</option>
-<option>Vårsta</option>
-</select>
-
-<input id="id" placeholder="VAV2392">
-
-<select id="status">
-<option value="trasig">Ventil Trasig</option>
-<option value="ej">Ej kontrollerad</option>
-<option value="trög">Ventil trög</option>
-<option value="övertäckt">Övertäckt</option>
-<option value="betäckning">Betäckning Defekt</option>
-<option value="hittarEj">Hittar ej</option>
-<option value="distanserad">Distanserad</option>
-</select>
-
-<select id="notePreset">
-<option value="">-- Notering snabbval --</option>
-<option>Sne/Snurrar</option>
-<option>Saknas nyckelstång</option>
-<option>Bil i vägen</option>
-<option>Bråte</option>
-<option>2 Gubbar</option>
-<option>Asfalt</option>
-<option>Jord</option>
-<option>Buskage</option>
-<option>Höjas</option>
-<option>Trasigt lock</option>
-<option>Måste mätas in</option>
-</select>
-
-<textarea id="note" placeholder="Extra notering..."></textarea>
-
-<select id="typ">
-<option>VAV</option>
-<option>VBP</option>
-<option>VSP</option>
-<option>SV</option>
-</select>
-
-<input type="file" id="foto" accept="image/*" capture="environment">
-<img id="preview" style="width:100%;margin-top:10px;">
-
-<button id="saveBtn">💾 SPARA</button>
-
-</div>
-
-<!-- ================= ADMIN ================= -->
-<div id="admin" class="page hidden">
-
-<h2>🧠 Adminläge</h2>
-
-<select id="filter">
-<option value="all">Visa alla</option>
-<option value="trög">Endast tröga</option>
-<option value="trasig">Endast trasiga</option>
-<option value="övertäckt">Övertäckta</option>
-<option value="hittarEj">Hittar ej</option>
-</select>
-
-<input id="search" placeholder="Sök VAV...">
-
-<div id="stats"></div>
+<!-- FÄLT -->
+<div id="field" class="page active">
 
 <div id="map"></div>
 
-<table>
-<thead>
-<tr>
-<th>ID</th>
-<th>Status</th>
-<th>Typ</th>
-<th>Område</th>
-<th>Notering</th>
-</tr>
-</thead>
-<tbody id="table"></tbody>
-</table>
+<div class="card">
+
+<h3>Snabb registrering</h3>
+
+<select id="type" onchange="updatePrefix()">
+<option value="VAV">VAV</option>
+<option value="VBP">VBP</option>
+<option value="VSP">VSP</option>
+</select>
+
+<input id="number" placeholder="Nummer (t.ex 2392)">
+<input id="area" placeholder="Område">
+
+<h4>Status</h4>
+
+<div id="statusContainer"></div>
+
+<select id="subStatus"></select>
+
+<input id="note" placeholder="Notering">
+
+<button onclick="getLocation()">📍 Hämta GPS</button>
+<button onclick="takePhoto()">📸 Ta foto</button>
+
+<button class="primary" onclick="save()">💾 Spara</button>
+
+</div>
+
+</div>
+
+<!-- ADMIN -->
+<div id="admin" class="page">
+
+<h2>Adminläge</h2>
+
+<select onchange="filter(this.value)">
+<option value="ALL">Alla</option>
+<option value="TRÖG">Trög</option>
+<option value="TRASIG">Trasig</option>
+<option value="HITTAR EJ">Hittar ej</option>
+</select>
+
+<div id="list"></div>
 
 </div>
 
@@ -137,126 +123,132 @@ tr:hover{background:#333;cursor:pointer;}
 
 <script>
 
-// ================= DATA =================
-let data = JSON.parse(localStorage.getItem("va_data")||"[]");
+let map = L.map('map').setView([59.2,17.8],13);
 
-// ================= NAV =================
-function show(p){
-field.classList.add("hidden");
-admin.classList.add("hidden");
-document.getElementById(p).classList.remove("hidden");
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
-if(p==="admin"){
-setTimeout(initMap,200);
+let markers = [];
+
+let data = JSON.parse(localStorage.getItem("va_data") || "[]");
+
+let statuses = {
+"TRÖG": ["2 Gubbar","Snurrar segt"],
+"TRASIG": ["Snurrar","Stum","Saknas"],
+"ÖVERTÄCKT": ["Asfalt","Jord","Buskage"],
+"BETÄCKNING": ["Trasig","Höjas","Byta"],
+"HITTAR EJ": ["Mätas in","Borta"]
+};
+
+function showPage(p){
+document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
+document.getElementById(p).classList.add('active');
 render();
 }
+
+function updatePrefix(){
 }
 
-// ================= FOTO =================
-foto.onchange = e=>{
-const reader = new FileReader();
-reader.onload = ev=>preview.src = ev.target.result;
-reader.readAsDataURL(e.target.files[0]);
+function renderStatus(){
+let c = document.getElementById("statusContainer");
+c.innerHTML="";
+Object.keys(statuses).forEach(s=>{
+let b = document.createElement("div");
+b.className="badge orange";
+b.innerText=s;
+b.onclick=()=>selectStatus(s);
+c.appendChild(b);
+});
 }
 
-// ================= SAVE =================
-saveBtn.onclick = ()=>{
+let selectedStatus="";
+
+function selectStatus(s){
+selectedStatus=s;
+let sub=document.getElementById("subStatus");
+sub.innerHTML="";
+statuses[s].forEach(x=>{
+let o=document.createElement("option");
+o.innerText=x;
+sub.appendChild(o);
+});
+}
+
+function getLocation(){
 navigator.geolocation.getCurrentPosition(pos=>{
+let lat=pos.coords.latitude;
+let lng=pos.coords.longitude;
 
-const obj = {
-id:id.value,
-status:status.value,
-note:(notePreset.value+" "+note.value).trim(),
-typ:typ.value,
-area:area.value,
-lat:pos.coords.latitude,
-lng:pos.coords.longitude,
-foto:preview.src
+L.marker([lat,lng]).addTo(map);
+
+window.currentPos={lat,lng};
+});
+}
+
+function takePhoto(){
+alert("Kamera öppnas (koppla riktig senare)");
+}
+
+function save(){
+
+let type=document.getElementById("type").value;
+let num=document.getElementById("number").value;
+
+let obj={
+id: Date.now(),
+vav: type+num,
+area: document.getElementById("area").value,
+status:selectedStatus,
+sub:document.getElementById("subStatus").value,
+note:document.getElementById("note").value,
+pos:window.currentPos || null
 };
 
 data.push(obj);
-localStorage.setItem("va_data",JSON.stringify(data));
+localStorage.setItem("va_data", JSON.stringify(data));
 
-alert("Sparad");
+alert("Sparad!");
+render();
 
-id.value="";
-note.value="";
-preview.src="";
-
-});
 }
 
-// ================= MAP =================
-let map;
-let markers=[];
-
-function initMap(){
-if(map) return;
-
-map = L.map('map').setView([59.215,17.867],13);
-
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-}
-
-// ================= RENDER =================
 function render(){
 
-const f = filter.value;
-const s = search.value.toLowerCase();
+let list=document.getElementById("list");
+if(!list) return;
 
-table.innerHTML="";
-markers.forEach(m=>map.removeLayer(m));
-markers=[];
+list.innerHTML="";
 
-let count=0;
-
-data.forEach(v=>{
-
-if(f!=="all" && v.status!==f) return;
-if(!v.id.toLowerCase().includes(s)) return;
-
-count++;
-
-const color = {
-trög:"orange",
-trasig:"red",
-övertäckt:"blue",
-hittarEj:"gray"
-}[v.status]||"green";
-
-const m = L.circleMarker([v.lat,v.lng],{
-radius:8,
-color:color
-}).addTo(map);
-
-m.bindPopup(`<b>${v.id}</b><br>${v.status}<br>${v.note}`);
-
-markers.push(m);
-
-const tr = document.createElement("tr");
-
-tr.innerHTML = `
-<td>${v.id}</td>
-<td class="${color}">${v.status}</td>
-<td>${v.typ}</td>
-<td>${v.area}</td>
-<td>${v.note}</td>
+data.forEach(d=>{
+let div=document.createElement("div");
+div.className="list-item";
+div.innerHTML=`
+<b>${d.vav}</b><br>
+${d.status} - ${d.sub}<br>
+${d.note || ""}
 `;
+list.appendChild(div);
 
-table.appendChild(tr);
-
+if(d.pos){
+L.marker([d.pos.lat,d.pos.lng]).addTo(map);
+}
 });
-
-stats.innerHTML = `Totalt: ${count}`;
-
 }
 
-// ================= EVENTS =================
-filter.onchange = render;
-search.oninput = render;
+function filter(f){
+let list=document.getElementById("list");
+list.innerHTML="";
 
-// ================= INIT =================
-show("field");
+data.filter(d=>f==="ALL"||d.status===f)
+.forEach(d=>{
+let div=document.createElement("div");
+div.className="list-item";
+div.innerHTML=`${d.vav} - ${d.status}`;
+list.appendChild(div);
+});
+}
+
+renderStatus();
+render();
 
 </script>
 
